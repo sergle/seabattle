@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"io/fs"
+	"log"
 	"net/http"
 
 	"github.com/coder/websocket"
@@ -22,6 +23,10 @@ func NewMux(hub *Hub, webFS fs.FS) *http.ServeMux {
 	})
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		ensureToken(w, r) // set sb_token on the HTML response if absent
+		// Embedded assets carry no modtime, so the browser would otherwise
+		// heuristically cache a stale style/script. Force a revalidation on
+		// every load; the assets are tiny so a full refetch is cheap.
+		w.Header().Set("Cache-Control", "no-cache, must-revalidate")
 		files.ServeHTTP(w, r)
 	})
 	return mux
@@ -46,6 +51,7 @@ func ensureToken(w http.ResponseWriter, r *http.Request) string {
 		Name:     cookieName,
 		Value:    tok,
 		Path:     "/",
+		MaxAge:   30 * 24 * 60 * 60, // 30d: must outlive a browser close so reconnect keeps the same slot
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 	})
@@ -61,6 +67,7 @@ func wsHandler(hub *Hub, w http.ResponseWriter, r *http.Request) {
 		InsecureSkipVerify: true, // trusted LAN: phones connect by raw IP
 	})
 	if err != nil {
+		log.Printf("ws accept failed from %s: %v", r.RemoteAddr, err)
 		return
 	}
 	serveWS(hub, ws, token)

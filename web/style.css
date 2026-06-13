@@ -68,6 +68,9 @@ h3 { margin: 10px 0 6px; font-size: 0.95rem; color: #415566; }
   touch-action: none; /* allow pointer drag without scroll */
 }
 
+/* own board shrunk to a reference thumbnail during play */
+.grid.compact { --cell: min(6.8vw, 27.2px); }
+
 .cell {
   width: var(--cell); height: var(--cell);
   background: var(--sea);

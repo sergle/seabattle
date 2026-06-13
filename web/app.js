@@ -155,7 +155,9 @@
     const grid = mine ? enemyGrid : ownGrid;
     if (m.outcome === 'sunk') {
       for (const c of (m.sunkCells || [])) Board.mark(grid, c.x, c.y, 'sunk');
-      for (const c of (m.revealed || [])) Board.mark(grid, c.x, c.y, 'miss');
+      // shooter sees revealed water as misses; on my own board it's the no-go buffer
+      const revealKind = mine ? 'miss' : 'nogo';
+      for (const c of (m.revealed || [])) Board.mark(grid, c.x, c.y, revealKind);
     } else {
       Board.mark(grid, m.x, m.y, m.outcome); // 'hit' | 'miss'
     }
@@ -234,6 +236,8 @@
 
   // --- screens ---------------------------------------------------------------
   function showPlacing() {
+    $('enemyTitle').classList.remove('hidden');
+    ownGrid.classList.remove('compact');
     $('enemySection').classList.add('hidden');
     $('ownSection').classList.remove('hidden');
     $('placeSection').classList.remove('hidden');
@@ -246,6 +250,9 @@
     setStatus('fleetReady');
   }
   function showPlaying() {
+    Board.clearNogo(ownGrid); // hide placement buffer; nogo returns only on a sunk ship
+    $('enemyTitle').classList.add('hidden');
+    ownGrid.classList.add('compact');
     $('placeSection').classList.add('hidden');
     $('enemySection').classList.remove('hidden');
     $('ownSection').classList.remove('hidden');
@@ -263,15 +270,16 @@
   // --- status / labels (i18n-aware) ------------------------------------------
   function applyStatus() {
     statusEl.className = 'status' + (curStatus.cls ? ' ' + curStatus.cls : '');
-    statusEl.textContent = t(curStatus.key, curStatus.params);
+    const prefix = curStatus.prefix ? t(curStatus.prefix) + ' · ' : '';
+    statusEl.textContent = prefix + t(curStatus.key, curStatus.params);
   }
   function setStatus(key, params) { curStatus = { key, params, cls: '' }; applyStatus(); }
 
   function setTurn() {
     enemyGrid.classList.toggle('active', yourTurn);
     curStatus = yourTurn
-      ? { key: 'yourTurnFire', params: null, cls: 'your-turn' }
-      : { key: 'opponentTurn', params: null, cls: 'their-turn' };
+      ? { key: 'yourTurnFire', params: null, cls: 'your-turn', prefix: 'enemyWaters' }
+      : { key: 'opponentTurn', params: null, cls: 'their-turn', prefix: 'enemyWaters' };
     applyStatus();
   }
 

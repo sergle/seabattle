@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"math/rand"
 
 	"seabattle/internal/game"
@@ -99,6 +100,7 @@ func (h *Hub) handleJoin(c command) {
 		sess.out.trySend(msgOpponent(oppName, oppOnline))
 		sess.out.trySend(h.stateFor(sess))
 		h.notifyOpponent(sess.Slot, msgOpponent(sess.Name, true))
+		log.Printf("player #%d reconnected: %q", sess.Slot, sess.Name)
 		return
 	}
 
@@ -112,6 +114,7 @@ func (h *Hub) handleJoin(c command) {
 	if slot < 0 {
 		c.out.trySend(msgFull())
 		c.out.close()
+		log.Printf("join rejected (game full): %q", name)
 		return
 	}
 	sess := &Session{Token: c.token, Slot: slot, Name: name, Online: true, out: c.out}
@@ -126,6 +129,7 @@ func (h *Hub) handleJoin(c command) {
 	// The already-present player's WAITING→PLACING cue is this opponent message
 	// (protocol.md §6); it is NOT re-sent a full state.
 	h.notifyOpponent(slot, msgOpponent(name, true))
+	log.Printf("player #%d connected: %q", slot, name)
 }
 
 // --- message dispatch -------------------------------------------------------
@@ -179,6 +183,8 @@ func (h *Hub) handlePlace(sess *Session, in inbound) {
 		for slot := 0; slot < 2; slot++ {
 			h.sendTo(h.slots[slot], msgGameStart(slot == first, first))
 		}
+		log.Printf("game started: %q vs %q",
+			h.slots[first].Name, h.slots[1-first].Name)
 	}
 }
 
@@ -201,6 +207,11 @@ func (h *Hub) handleFire(sess *Session, in inbound) {
 	h.broadcast(frame)
 	if res.GameOver {
 		h.broadcast(msgGameOver(res.Winner))
+		var winName string
+		if w := h.slots[res.Winner]; w != nil {
+			winName = w.Name
+		}
+		log.Printf("game finished: player #%d %q won", res.Winner, winName)
 	}
 }
 
@@ -286,6 +297,7 @@ func (h *Hub) markOffline(sess *Session) {
 	if sess.out != nil {
 		sess.out.close()
 	}
+	log.Printf("player #%d disconnected: %q", sess.Slot, sess.Name)
 	if h.occupied() == 1 {
 		// only ever this player → free the slot for a fresh visitor.
 		delete(h.tokens, sess.Token)

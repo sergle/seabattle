@@ -21,7 +21,7 @@ import (
 var embeddedWeb embed.FS
 
 // version is the application version, printed on startup.
-const version = "1.0"
+const version = "1.1"
 
 func main() {
 	port := flag.String("port", "8080", "TCP port to listen on")

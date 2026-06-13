@@ -39,6 +39,12 @@
     for (const c of el.children) c.classList.remove('preview-ok', 'preview-bad');
   }
 
+  // clearNogo strips only the no-go buffer shading (kept during placement,
+  // hidden once play starts; re-added around an own ship after it is sunk).
+  function clearNogo(el) {
+    for (const c of el.children) c.classList.remove('nogo');
+  }
+
   function mark(el, x, y, kind) {
     if (!Rules.inBounds(x, y)) return;
     cell(el, x, y).classList.add(kind);
@@ -55,5 +61,5 @@
     }
   }
 
-  global.Board = { build, cell, cellFromEvent, clearMarks, clearPreview, mark, renderShips };
+  global.Board = { build, cell, cellFromEvent, clearMarks, clearNogo, clearPreview, mark, renderShips };
 })(window);
